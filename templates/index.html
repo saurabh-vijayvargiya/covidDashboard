@@ -1,48 +1,166 @@
 <html>
+
 <head>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js"></script>
+    <script src="https://code.highcharts.com/maps/highmaps.js"></script>
+    <script src="https://code.highcharts.com/maps/modules/data.js"></script>
+    <script src="https://code.highcharts.com/maps/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/maps/modules/offline-exporting.js"></script>
+    <script src="https://code.highcharts.com/mapdata/custom/world.js"></script>
+    <link rel="stylesheet" type="text/css" href="//github.com/downloads/lafeber/world-flags-sprite/flags32.css" />
+    <style>
+        body {
+            padding-top: 60px;
+            padding-bottom: 40px;
+        }
+        
+        .fixed-header,
+        fixed-footer {
+            width: 100%;
+            position: fixed;
+            background: #333;
+            padding: 10px 0;
+            color: #fff;
+        }
+        
+        .fixed-header {
+            top: 0;
+            z-index: 99;
+        }
+        
+        .fixed-bottom {
+            bottom: 0;
+        }
+        
+        .container {
+            width: 80%;
+            margin: 0 auto;
+        }
+        
+        nav a {
+            color: #fff;
+            text-decoration: none;
+            padding: 7px 25px;
+            display: inline-block;
+        }
+        .f32{
+            color: #f22;
+        }
+    </style>
 </head>
+
 <body>
-Total count - {{ totalCount }}
-<canvas id="myChart"></canvas>
+    <div class="fixed-header">
+        <div>
+            <nav><a href="/"><span style="font-size: 40px;">COVID-19 Dashboard</span></a></nav>
+        </div>
+    </div>
+    <h1>Total count - {{ totalCount }} on {{ barPlotDate }}</h1>
+    <div>
+        <div class="col-lg-3" style="float: left; max-height: 650px; max-width: 400px; overflow: scroll; overflow-x: hidden;">
+            <div class="col-lg-12" style="float: left;">
+                <div class="col-lg-4" style="float: left;">
+                    {% for countryName in countryNames %}
+                        <input type="submit" name="countryName" value="{{countryName}}" style="width: 100px;"> <br>
+                    {% endfor %}
+                </div>
+                <div class="col-lg-8" style="float: left;">
+                    <canvas id="myChart" style="width: 280px; height: 4125px;"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6" style="float: left; margin-left: 10px;">
+            <div id="mapChart" style="width: 650px; height: 650px;"></div>
+        </div>
+        <div class="col-lg-3"></div>
+    </div>
 </body>
 <script>
-var ctx = document.getElementById('myChart');
-var myChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-        labels:{{ varA|safe }},
-        datasets: [{
-            label: '# of Votes',
-            data: [12, 19, 3, 5, 2, 3],
-            backgroundColor: [
-                'rgba(255, 99, 132, 0.2)',
-                'rgba(54, 162, 235, 0.2)',
-                'rgba(255, 206, 86, 0.2)',
-                'rgba(75, 192, 192, 0.2)',
-                'rgba(153, 102, 255, 0.2)',
-                'rgba(255, 159, 64, 0.2)'
-            ],
-            borderColor: [
-                'rgba(255, 99, 132, 1)',
-                'rgba(54, 162, 235, 1)',
-                'rgba(255, 206, 86, 1)',
-                'rgba(75, 192, 192, 1)',
-                'rgba(153, 102, 255, 1)',
-                'rgba(255, 159, 64, 1)'
-            ],
-            borderWidth: 1
-        }]
-    },
-    options: {
-        scales: {
-            yAxes: [{
-                ticks: {
-                    beginAtZero: true
-                }
+    var ctx = document.getElementById('myChart').getContext('2d');
+    var myChart = new Chart(ctx, {
+        type: 'horizontalBar',
+        data: {
+            labels: {{ countryNames|safe }},
+            datasets: [{
+                label: '# of infected patients',
+                data: {{ barPlotVals|safe }},
+                backgroundColor: 'rgb(255, 99, 132)',
+                borderColor: 'rgb(255, 99, 132)',
+                borderWidth: 1
             }]
+        },
+        options: {
+            legend: {
+                display: false
+            },
+            scales: {
+                xAxes: [{
+                    barPercentage: 1
+                }],
+                yAxes: [
+                    {ticks: {display: false}},
+                    {display: false},
+                ],
+                elements: {
+                    rectangle: {
+                        borderSkipped: 'left',
+                    }
+                }
+            }
         }
-    }
-});
+    });
 </script>
+<script>
+    // Initiate the chart
+    Highcharts.mapChart('mapChart', {
+
+        chart: {
+            map: 'custom/world'
+        },
+
+        title: {
+            text: 'Covid-19 patients on world map'
+        },
+        credits: {
+            enabled: false
+        },
+
+        legend: {
+            enabled: false
+        },
+
+        tooltip: {
+            backgroundColor: '#ddd',
+            borderWidth: 0,
+            shadow: false,
+            useHTML: true,
+            padding: 5,
+            pointFormat: '<span class="f32"><span class="flag {point.properties.hc-key}">' +
+                '</span></span> {point.name}' + 
+                '<br><span style="font-size:30px">{point.value}</span>',
+            positioner: function () {
+                return { x: 50, y: 50 };
+            }
+        },
+
+        colorAxis: {
+            min: 1,
+            max: 1000,
+            type: 'logarithmic'
+        },
+
+        series: [{
+            data: {{ dataForMap|safe }},
+            joinBy: ['iso-a3', 'code3'],
+            name: 'Patient count',
+            states: {
+                hover: {
+                    color: '#a4edba'
+                }
+            }
+        }]
+    });
+
+</script>
+
 </html>
